@@ -10,6 +10,7 @@ except ImportError:
     # Python < 3.7
     pkg_resources = None
 import random
+import re
 from copy import copy
 from math import log2
 
@@ -609,11 +610,25 @@ class Board:
                 beta = min(beta, value)
             return value
 
-    @staticmethod
-    def _has_simple_format(move: str) -> bool:
-        return False
-
     def _simple_format_to_san(self, move: str) -> str:
+        match = re.match(r"^([A-Ha-h])([1-8]) to ([A-Ha-h])([1-8])$", move)
+        if match is None:
+            raise ValueError
+        startFile = match.group(1).upper()
+        startRank = match.group(2)
+        destFile = match.group(3).upper()
+        destRank = match.group(4)
+        startSquare = startFile + startRank
+        destSquare = destFile + destRank
+        startPos = 2 ** coords_to_pos[startSquare]
+        destPos = 2 ** coords_to_pos[destSquare]
+        pieceCategory = self.identify_piece_at(startPos)[1]
+        if pieceCategory == "pawns":
+            pieceLetter = ""
+        else:
+            pieceLetter = pieceCategory[0].upper()
+        print(f"DEBUG: would move a {pieceLetter}")
+
         return move
 
     def _lax_san_to_san(self, move: str) -> str:
@@ -628,12 +643,15 @@ class Board:
         Depending on whether the 'lax' parameter is set, the move will be
         attempted to be translated into proper SAN, or be left untouched.
         """
-        if Board._has_simple_format(user_input):
+        try:
             return self._simple_format_to_san(user_input)
+        except ValueError:
+            pass
         if lax:
             return self._lax_san_to_san(user_input)
         # Otherwise, keep the move untouched
-        return user_input
+        else:
+            return user_input
 
     def play(self, search_depth: int = 4) -> None:
         """
