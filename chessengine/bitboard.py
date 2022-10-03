@@ -609,6 +609,32 @@ class Board:
                 beta = min(beta, value)
             return value
 
+    @staticmethod
+    def _has_simple_format(move: str) -> bool:
+        return False
+
+    def _simple_format_to_san(self, move: str) -> str:
+        return move
+
+    def _lax_san_to_san(self, move: str) -> str:
+        return move
+
+    def to_san(self, user_input: str, lax: bool = True) -> str:
+        """
+        Attempts to transform user input to Standard Algebraic Notation (SAN).
+        First checks if the user input is (exactly) in format 'e2 to e4'.
+        If so, the move is translated accordingly.
+        If not, the input is assumed to be in SAN, or at least SAN-like.
+        Depending on whether the 'lax' parameter is set, the move will be
+        attempted to be translated into proper SAN, or be left untouched.
+        """
+        if Board._has_simple_format(user_input):
+            return self._simple_format_to_san(user_input)
+        if lax:
+            return self._lax_san_to_san(user_input)
+        # Otherwise, keep the move untouched
+        return user_input
+
     def play(self, search_depth: int = 4) -> None:
         """
         The game loop.
@@ -680,7 +706,7 @@ class Board:
 
                     # input was normal move
                     try:
-                        self.move_san(move=move, side=side_to_move)
+                        self.move_san(move=self.to_san(move), side=side_to_move)
                         input_accepted = True
                     except ValueError as e:
                         print(e)
@@ -736,7 +762,7 @@ class Board:
                     break
 
                 try:
-                    self.move_san(move=move, side=side_to_move)
+                    self.move_san(move=self.to_san(move), side=side_to_move)
                     input_accepted = True
                     last_move = f"{side_to_move.capitalize()} moved {move}"
                 except ValueError as e:
