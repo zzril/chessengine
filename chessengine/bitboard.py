@@ -410,6 +410,76 @@ class Board:
         move_side_board |= mask_position[end]
         self.set_bitboard(start_side, start_piece, move_side_board)
 
+    def is_legal(self, moves: list[tuple[int, int]]) -> bool:
+        """
+        Checks if executing a given move (or set of moves, in case of castling)
+        would be legal.
+        Parameter "moves" should be a list of tuples of the form "(start, end)",
+        with "(start, end)" being the coordinates in the form as #move expects
+        them.
+        """
+        return True
+
+    def san_to_coordinates(self, move: str, side: str) -> list[tuple[int, int]]:
+        """
+        Translates a move given in SAN into a list of operations to perform by
+        #move .
+        """
+        if "0-0-0" in move:
+            # queen side castle
+            if side == "white":
+                return [(1, 2**3), (2**4, 2**2)]
+            else:
+                return [(2**56, 2**59), (2**60, 2**58)]
+        elif "0-0" in move:
+            # king side castle
+            if side == "white":
+                return [(2**7, 2**5), (2**4, 2**6)]
+            else:
+                return [(2**63, 2**61), (2**60, 2**62)]
+        else:
+            # regular move
+            match = SAN_MOVE_REGEX.match(move)
+            if match is None:
+                raise ValueError(f'Couldn\'t parse move "{move}".')
+
+            groups = match.groups()
+            if groups[0] is None:
+                piece_moved = san_piece_map["P"]
+            else:
+                piece_moved = san_piece_map[groups[0].upper()]
+
+            end_pos = 2 ** coords_to_pos[groups[3].upper()]
+            moves = self.get_moves(side, piece_moved)
+            if groups[1] is None:
+                # No file provided in the SAN
+                for m in moves:
+                    if m[1] == end_pos:
+                            return [(m[0], m[1])]
+                else:
+                    raise ValueError(f"{move} is not a valid move for {side}.")
+            else:
+                if groups[2] is None:
+                    # No rank provided in the SAN
+                    for m in moves:
+                        file = get_file(m[0])
+                        if (
+                            groups[1].upper() == "ABCDEFGH"[file - 1]
+                            and m[1] == end_pos
+                        ):
+                            return [(m[0], m[1])]
+                    else:
+                        raise ValueError(f"{move} is not a valid move for {side}.")
+                else:
+                    # File and rank both present in the SAN
+                    start_pos = 2 ** coords_to_pos[groups[1].upper() + groups[2]]
+                    if (start_pos, end_pos) not in moves:
+                        raise ValueError(f"{move} is not a valid move for {side}.")
+                    self.move(start=start_pos, end=end_pos)
+                    return [(start_pos, end_pos)]
+
+        return None # should be unreachable
+
     def move_san(self, move: str, side: str) -> None:
         """
         Make a move given in standard algebraic notation.
